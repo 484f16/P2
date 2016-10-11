@@ -1,5 +1,6 @@
 package project2;
 
+import java.nio.file.attribute.UserPrincipal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -159,7 +160,7 @@ public class MyFakebookOracle extends FakebookOracle {
 
 
             rst = stmt.executeQuery("select distinct first_name from tajik.public_users order by length(first_name) asc");
-            while(rst.next()){
+            while (rst.next()) {
                 if (this.shortestFirstNames.isEmpty())
                     this.shortestFirstNames.add(rst.getString(1));
                 else if (this.shortestFirstNames.first().length() == rst.getString(1).length())
@@ -169,15 +170,13 @@ public class MyFakebookOracle extends FakebookOracle {
             }
 
             rst = stmt.executeQuery("select count(first_name),first_name from tajik.public_users group by first_name order by count(first_name) desc");
-            while(rst.next()){
-                if (this.mostCommonFirstNames.isEmpty()){
+            while (rst.next()) {
+                if (this.mostCommonFirstNames.isEmpty()) {
                     this.mostCommonFirstNamesCount = rst.getInt(1);
                     this.mostCommonFirstNames.add(rst.getString(2));
-                }
-                else if(rst.getInt(1) == this.mostCommonFirstNamesCount){
+                } else if (rst.getInt(1) == this.mostCommonFirstNamesCount) {
                     this.mostCommonFirstNames.add(rst.getString(2));
-                }
-                else
+                } else
                     break;
             }
 
@@ -222,14 +221,14 @@ public class MyFakebookOracle extends FakebookOracle {
 
             this.lonelyUsers.clear();
 
-            while(rst.next()){
-                this.lonelyUsers.add(new UserInfo(rst.getLong(1),rst.getString(2),rst.getString(3)));
+            while (rst.next()) {
+                this.lonelyUsers.add(new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3)));
 
             }
 
             rst.close();
             stmt.close();
-        }catch (SQLException err){
+        } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
     }
@@ -250,20 +249,20 @@ public class MyFakebookOracle extends FakebookOracle {
             ResultSet rst = stmt.executeQuery("select distinct C.user_id,U.first_name,U.last_name from tajik.public_user_current_city C, tajik.public_user_hometown_city H, tajik.public_users U where H.hometown_city_id <> C.current_city_id and H.user_id=C.user_id and U.user_id=C.user_id");
 
 
-
             this.liveAwayFromHome.clear();
-            while(rst.next()){
-                this.liveAwayFromHome.add(new UserInfo(rst.getLong(1),rst.getString(2),rst.getString(3)));
+            while (rst.next()) {
+                this.liveAwayFromHome.add(new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3)));
             }
 
 
             rst.close();
             stmt.close();
-        }catch (SQLException err){
+        } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
 
     }
+
 
     @Override
     // **** Query 4 ****
@@ -271,68 +270,64 @@ public class MyFakebookOracle extends FakebookOracle {
     // If there are ties, choose the photo with the smaller numeric PhotoID first
     //
     public void findPhotosWithMostTags(int n) {
-        String photoId = "1234567";
-        String albumId = "123456789";
-        String albumName = "album1";
-        String photoCaption = "caption1";
-        String photoLink = "http://google.com";
-        PhotoInfo p = new PhotoInfo(photoId, albumId, albumName, photoCaption, photoLink);
-        TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
-        tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName1", "taggedUserLastName1"));
-        tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName2", "taggedUserLastName2"));
-        this.photosWithMostTags.add(tp);
+        // String photoId = "1234567";
+        // String albumId = "123456789";
+        // String albumName = "album1";
+        // String photoCaption = "caption1";
+        // String photoLink = "http://google.com";
+        // PhotoInfo p = new PhotoInfo(photoId, albumId, albumName, photoCaption, photoLink);
+        // TaggedPhotoInfo tp = new TaggedPhotoInfo(p);
+        // tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName1", "taggedUserLastName1"));
+        // tp.addTaggedUser(new UserInfo(12345L, "taggedUserFirstName2", "taggedUserLastName2"));
+        // this.photosWithMostTags.add(tp);
 
 
+        PhotoInfo p;
+        TaggedPhotoInfo tp;
         try (Statement stmt =
                      oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
                              ResultSet.CONCUR_READ_ONLY)) {
 
 
-            ResultSet rst = stmt.executeQuery("select distinct T.count_tag_subject_id,T.tag_photo_id,A.album_id,A.album_name,P.photo_caption,P.photo_link,U.user_id,U.first_name,U.last_name from top_tags T, tajik.public_tags TT, tajik.public_albums A, tajik.public_photos P,tajik.public_users U where A.album_id=P.album_id and TT.tag_photo_id=T.tag_photo_id and U.user_id=TT.tag_subject_id and P.photo_id=T.tag_photo_id order by T.count_tag_subject_id asc, U.user_id asc");
+            stmt.executeQuery("create or replace view top_tags as select distinct count(tag_subject_id) as count_tag_subject_id,tag_photo_id from tajik.public_tags group by tag_photo_id order by count(tag_subject_id) desc");
 
-            int photosWithMostTagsNum = 0;
-            if(rst.next()){
-                p = new PhotoInfo(rst.getString(2),rst.getString(3),rst.getString(4),rst.getString(5),rst.getString(6));
-                tp = new TaggedPhotoInfo(p);
-                tp.addTaggedUser(new UserInfo(rst.getLong(7),rst.getString(8),rst.getString(9)));
-                photosWithMostTagsNum = rst.getInt(1);
-            }
+            ResultSet rst = stmt.executeQuery("select distinct T.count_tag_subject_id,T.tag_photo_id,A.album_id,A.album_name,P.photo_caption,P.photo_link,U.user_id,U.first_name,U.last_name from top_tags T, tajik.public_tags TT, tajik.public_albums A, tajik.public_photos P,tajik.public_users U where A.album_id=P.album_id and TT.tag_photo_id=T.tag_photo_id and U.user_id=TT.tag_subject_id and P.photo_id=T.tag_photo_id order by T.count_tag_subject_id desc,T.tag_photo_id asc");
 
-//            while(rst.next())
-            {
 
-                p = new PhotoInfo(rst.getString(2),rst.getString(3),rst.getString(4),rst.getString(5),rst.getString(6));
-                if(tp.photoInfo.equals(p)){
-                    tp.addTaggedUser(new UserInfo(rst.getLong(7),rst.getString(8),rst.getString(9)));
 
-                }
-                else if(rst.getInt(1)==photosWithMostTagsNum){
+            rst.next();
+
+            p = new PhotoInfo(rst.getString(2), rst.getString(3), rst.getString(4), rst.getString(5), rst.getString(6));
+            tp = new TaggedPhotoInfo(p);
+            tp.addTaggedUser(new UserInfo(rst.getLong(7), rst.getString(8), rst.getString(9)));
+                    
+
+
+            while (rst.next() && n>0) {
+                // p = new PhotoInfo(rst.getString(2), rst.getString(3), rst.getString(4), rst.getString(5), rst.getString(6));
+                if(p.photoId.equals(rst.getString(2))){
+                    tp.addTaggedUser(new UserInfo(rst.getLong(7), rst.getString(8), rst.getString(9)));
+                } 
+                else {
                     this.photosWithMostTags.add(tp);
+                    p = new PhotoInfo(rst.getString(2), rst.getString(3), rst.getString(4), rst.getString(5), rst.getString(6));
                     tp = new TaggedPhotoInfo(p);
-                    tp.addTaggedUser(new UserInfo(rst.getLong(7),rst.getString(8),rst.getString(9)));
+                    tp.addTaggedUser(new UserInfo(rst.getLong(7), rst.getString(8), rst.getString(9)));
+                    n--;    
                 }
-                else{
-                    this.photosWithMostTags.add(tp);
-                    break;
-                }
-
 
             }
 
+            stmt.executeQuery("drop view top_tags");
 
-            while(rst.next()){
-                p = new PhotoInfo(rst.getString(2),rst.getString(3),rst.getString(4),rst.getString(5),rst.getString(6));
-                tp.addTaggedUser(new UserInfo(rst.getLong(7),rst.getString(8),rst.getString(9)));
-                this.photosWithMostTags.add(tp);
-
-            }
             rst.close();
             stmt.close();
-        }catch (SQLException err){
+        } catch (SQLException err) {
             System.err.println(err.getMessage());
         }
 
     }
+
 
     @Override
     // **** Query 5 ****
@@ -349,24 +344,83 @@ public class MyFakebookOracle extends FakebookOracle {
     // (iii) If there are still ties, choose the pair with the smaller user_id for the male
     //
     public void matchMaker(int n, int yearDiff) {
-        Long girlUserId = 123L;
-        String girlFirstName = "girlFirstName";
-        String girlLastName = "girlLastName";
-        int girlYear = 1988;
-        Long boyUserId = 456L;
-        String boyFirstName = "boyFirstName";
-        String boyLastName = "boyLastName";
-        int boyYear = 1986;
-        MatchPair mp = new MatchPair(girlUserId, girlFirstName, girlLastName,
-                girlYear, boyUserId, boyFirstName, boyLastName, boyYear);
-        String sharedPhotoId = "12345678";
-        String sharedPhotoAlbumId = "123456789";
-        String sharedPhotoAlbumName = "albumName";
-        String sharedPhotoCaption = "caption";
-        String sharedPhotoLink = "link";
-        mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
-                sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
-        this.bestMatches.add(mp);
+        // Long girlUserId = 123L;
+        // String girlFirstName = "girlFirstName";
+        // String girlLastName = "girlLastName";
+        // int girlYear = 1988;
+        // Long boyUserId = 456L;
+        // String boyFirstName = "boyFirstName";
+        // String boyLastName = "boyLastName";
+        // int boyYear = 1986;
+        // MatchPair mp = new MatchPair(girlUserId, girlFirstName, girlLastName,
+        //         girlYear, boyUserId, boyFirstName, boyLastName, boyYear);
+        // String sharedPhotoId = "12345678";
+        // String sharedPhotoAlbumId = "123456789";
+        // String sharedPhotoAlbumName = "albumName";
+        // String sharedPhotoCaption = "caption";
+        // String sharedPhotoLink = "link";
+        // mp.addSharedPhoto(new PhotoInfo(sharedPhotoId, sharedPhotoAlbumId,
+        //         sharedPhotoAlbumName, sharedPhotoCaption, sharedPhotoLink));
+        // this.bestMatches.add(mp);
+
+        MatchPair mp;
+
+        try (Statement stmt =
+                     oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                             ResultSet.CONCUR_READ_ONLY)) {
+
+            stmt.executeQuery("create or replace view Q5_view as " +
+                    "select distinct U1.user_id as user1_id, U2.user_id as user2_id from tajik.public_users U1 " +
+                    "join tajik.public_users U2 on U1.gender='female' and U2.gender='male' and U1.year_of_birth-U2.year_of_birth<=" + yearDiff + " and U2.year_of_birth-U1.year_of_birth<=" + yearDiff +
+                    "join tajik.public_tags T1 on U1.user_id=T1.tag_subject_id " +
+                    "join tajik.public_tags T2 on U2.user_id=T2.tag_subject_id and T1.tag_photo_id=T2.tag_photo_id " +
+                    "MINUS " +
+                    "select distinct U1.user_id as user1_id, U2.user_id as user2_id from tajik.public_users U1 " +
+                    "join tajik.public_users U2 on U1.gender='female' and U2.gender='male' and U1.year_of_birth-U2.year_of_birth<=" + yearDiff + " and U2.year_of_birth-U1.year_of_birth<=" + yearDiff +
+                    "join tajik.public_friends F on (U1.user_id=F.user1_id and U2.user_id=F.user2_id) or (U1.user_id=F.user2_id and U2.user_id=F.user1_id) " +
+                    "join tajik.public_tags T1 on U1.user_id=T1.tag_subject_id " +
+                    "join tajik.public_tags T2 on U2.user_id=T2.tag_subject_id and T1.tag_photo_id=T2.tag_photo_id "
+            );
+
+
+            stmt.executeQuery("create or replace view Q5_view2 as " +
+                    "select count(*) as count_pair,V.user1_id,V.user2_id from Q5_view V " +
+                    "join tajik.public_tags T1 on T1.tag_subject_id=V.user1_id " +
+                    "join tajik.public_tags T2 on T2.tag_subject_id=V.user2_id and T2.tag_photo_id=T2.tag_photo_id " +
+                    "group by V.user1_id,V.user2_id " +
+                    "order by count(*) desc "
+            );
+
+
+            ResultSet rst = stmt.executeQuery("select distinct V.count_pair,V.user1_id,U1.first_name,U1.last_name,U1.year_of_birth,V.user2_id,U2.first_name,U2.last_name,U2.year_of_birth, " +
+                    "T1.tag_photo_id,A.album_id,A.album_name,P.photo_caption,P.photo_link " +
+                    "from Q5_view2 V,tajik.public_users U1,tajik.public_users U2,tajik.public_tags T1,tajik.public_tags T2,tajik.public_photos P,tajik.public_albums A " +
+                    "where V.user1_id=U1.user_id and V.user2_id=U2.user_id and T1.tag_photo_id=T2.tag_photo_id and T1.tag_subject_id=U1.user_id and T2.tag_subject_id=U2.user_id " +
+                    "and P.photo_id=T1.tag_photo_id and P.album_id=A.album_id " +
+                    "order by V.count_pair "
+            );
+
+            while (rst.next() && n > 0) {
+
+                mp = new MatchPair(rst.getLong(2), rst.getString(3), rst.getString(4), rst.getInt(5),
+                        rst.getLong(6), rst.getString(7), rst.getString(8), rst.getInt(9));
+
+
+                mp.addSharedPhoto(new PhotoInfo(rst.getString(10), rst.getString(11), rst.getString(12), rst.getString(13), rst.getString(14)));
+
+                this.bestMatches.add(mp);
+                n--;
+
+            }
+
+            stmt.executeQuery("drop view Q5_view");
+            stmt.executeQuery("drop view Q5_view2");
+            // Close statement and result set
+            rst.close();
+            stmt.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
     }
 
     // **** Query 6 ****
@@ -384,18 +438,84 @@ public class MyFakebookOracle extends FakebookOracle {
     //
     @Override
     public void suggestFriendsByMutualFriends(int n) {
-        Long user1_id = 123L;
-        String user1FirstName = "User1FirstName";
-        String user1LastName = "User1LastName";
-        Long user2_id = 456L;
-        String user2FirstName = "User2FirstName";
-        String user2LastName = "User2LastName";
-        UsersPair p = new UsersPair(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+//        Long user1_id = 123L;
+//        String user1FirstName = "User1FirstName";
+//        String user1LastName = "User1LastName";
+//        Long user2_id = 456L;
+//        String user2FirstName = "User2FirstName";
+//        String user2LastName = "User2LastName";
+//        UsersPair p = new UsersPair(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+//
+//        p.addSharedFriend(567L, "sharedFriend1FirstName", "sharedFriend1LastName");
+//        p.addSharedFriend(678L, "sharedFriend2FirstName", "sharedFriend2LastName");
+//        p.addSharedFriend(789L, "sharedFriend3FirstName", "sharedFriend3LastName");
+//        this.suggestedUsersPairs.add(p);
 
-        p.addSharedFriend(567L, "sharedFriend1FirstName", "sharedFriend1LastName");
-        p.addSharedFriend(678L, "sharedFriend2FirstName", "sharedFriend2LastName");
-        p.addSharedFriend(789L, "sharedFriend3FirstName", "sharedFriend3LastName");
-        this.suggestedUsersPairs.add(p);
+//         UsersPair p;
+
+        try (Statement stmt =
+                     oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                             ResultSet.CONCUR_READ_ONLY)) {
+
+            // For each month, find the number of users born that month
+            // Sort them in descending order of count
+            stmt.executeQuery("create or replace view view_Q6 as "+
+                            "select U1.user_id as user1_id, U2.user_id as user2_id ,count(*) as count_friends "+
+                            "from tajik.public_users U1,tajik.public_users U2,tajik.public_friends F1,tajik.public_friends F2 "+
+                            "where U1.user_id<U2.user_id and ((F1.user2_id=U1.user_id and F2.user2_id=U2.user_id and F1.user1_id=F2.user1_id) "+
+                            "or (F1.user1_id=U1.user_id and F2.user2_id=U2.user_id and F1.user2_id=F2.user1_id) "+
+                            "or (U1.user_id=F1.user1_id and U2.user_id=F2.user1_id and F1.user2_id=F2.user2_id)) "+
+                            "group by U1.user_id,U2.user_id order by count(*) desc");
+
+
+
+            ResultSet rst = stmt.executeQuery("(select V.user1_id as user1_id,U1.first_name,U2.last_name,V.user2_id as user2_id,U2.first_name,U2.last_name,F1.user1_id as user3_id,U3.first_name,U3.last_name,V.count_friends as count_friends "+
+                            "from view_Q6 V, tajik.public_users U1, tajik.public_users U2, tajik.public_friends F1,tajik.public_friends F2,tajik.public_users U3 "+
+                            "where V.user1_id=U1.user_id and V.user2_id=U2.user_id and F1.user2_id=U1.user_id and F2.user2_id=U2.user_id and F1.user1_id=F2.user1_id and F1.user1_id=U3.user_id "+
+                            "UNION "+
+                            "select V.user1_id,U1.first_name,U2.last_name,V.user2_id,U2.first_name,U2.last_name,F1.user2_id as user3_id,U3.first_name,U3.last_name,V.count_friends "+
+                            "from view_Q6 V, tajik.public_users U1, tajik.public_users U2, tajik.public_friends F1,tajik.public_friends F2,tajik.public_users U3 "+
+                            "where V.user1_id=U1.user_id and V.user2_id=U2.user_id and F1.user1_id=U1.user_id and F2.user2_id=U2.user_id and F1.user2_id=F2.user1_id and F1.user2_id=U3.user_id "+
+                            "UNION "+
+                            "select V.user1_id,U1.first_name,U2.last_name,V.user2_id,U2.first_name,U2.last_name,F1.user2_id as user3_id,U3.first_name,U3.last_name,V.count_friends "+
+                            "from view_Q6 V, tajik.public_users U1, tajik.public_users U2, tajik.public_friends F1,tajik.public_friends F2,tajik.public_users U3 "+
+                            "where V.user1_id=U1.user_id and V.user2_id=U2.user_id and F1.user1_id=U1.user_id and F2.user1_id=U2.user_id and F1.user2_id=F2.user2_id and F1.user2_id=U3.user_id) "+
+                            "order by count_friends desc, user1_id asc, user2_id asc ");
+
+
+            rst.next();
+            UsersPair p = new UsersPair(rst.getLong(1),rst.getString(2),rst.getString(3),rst.getLong(4),rst.getString(5),rst.getString(6));
+            p.addSharedFriend(rst.getLong(7),rst.getString(8),rst.getString(9));
+
+
+            while (rst.next() && n>0){
+//                if(rst.isFirst()){
+//                    UsersPair p = new UsersPair(rst.getLong(1),rst.getString(2),rst.getString(3),rst.getLong(4),rst.getString(5),rst.getString(6));
+//                    p.addSharedFriend(rst.getLong(7),rst.getString(8),rst.getString(9));
+//
+//                }
+//                System.out.println(p.compareTo(new UsersPair(rst.getLong(1),rst.getString(2),rst.getString(3),rst.getLong(4),rst.getString(5),rst.getString(6))));
+//                System.out.print(p.compareTo(p));
+                if(p.user1Id.equals(rst.getLong(1)) && p.user2Id.equals(rst.getLong(4))){
+                    p.addSharedFriend(rst.getLong(7),rst.getString(8),rst.getString(9));
+                }
+                else{
+                    this.suggestedUsersPairs.add(p);
+                    p = new UsersPair(rst.getLong(1),rst.getString(2),rst.getString(3),rst.getLong(4),rst.getString(5),rst.getString(6));
+                    p.addSharedFriend(rst.getLong(7),rst.getString(8),rst.getString(9));
+                    n--;
+                }
+
+            }
+
+            stmt.executeQuery("drop view view_Q6");
+
+            // Close statement and result set
+            rst.close();
+            stmt.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
     }
 
     @Override
@@ -404,13 +524,39 @@ public class MyFakebookOracle extends FakebookOracle {
     // Find the name of the state with the most events, as well as the number of
     // events in that state.  If there is a tie, return the names of all of the (tied) states.
     //
+
     public void findEventStates() {
-        this.eventCount = 12;
-        this.popularStateNames.add("Michigan");
-        this.popularStateNames.add("California");
+//        this.eventCount = 12;
+//        this.popularStateNames.add("Michigan");
+//        this.popularStateNames.add("California");
+
+        try (Statement stmt =
+                     oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                             ResultSet.CONCUR_READ_ONLY)) {
+
+            // For each month, find the number of users born that month
+            // Sort them in descending order of count
+            ResultSet rst = stmt.executeQuery("select C.state_name,count(C.state_name) from tajik.public_cities C join tajik.public_user_events E on C.city_id=E.event_city_id group by C.state_name order by count(C.state_name) desc");
+
+            if (rst.next()) {
+                this.eventCount = rst.getInt(2);
+                this.popularStateNames.add(rst.getString(1));
+            }
+
+            while (rst.next() && (this.eventCount == rst.getInt(2))) {
+
+                this.popularStateNames.add(rst.getString(1));
+
+            }
+            // Close statement and result set
+            rst.close();
+            stmt.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
     }
 
-    //@Override
+    @Override
     // ***** Query 8 *****
     // Given the ID of a user, find information about that
     // user's oldest friend and youngest friend
@@ -421,6 +567,41 @@ public class MyFakebookOracle extends FakebookOracle {
     public void findAgeInfo(Long user_id) {
         this.oldestFriend = new UserInfo(1L, "Oliver", "Oldham");
         this.youngestFriend = new UserInfo(25L, "Yolanda", "Young");
+
+
+        try (Statement stmt =
+                     oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                             ResultSet.CONCUR_READ_ONLY)) {
+
+            // For each month, find the number of users born that month
+            // Sort them in descending order of count
+            // ResultSet rst = stmt.executeQuery("create view friendsOfUser as (select user2_id from tajik.public_friends F where F.user1_id=" + "\'" + user_id + "\'" + " UNION select user1_id from tajik.public_friends F where F.user2_id=" + "\'" + user_id + "\')");
+            // while (rst.next()) {
+
+            // }
+
+            stmt.executeQuery("create or replace view friendsOfUser as (select user2_id as user_id from tajik.public_friends F where F.user1_id=" + "\'" + user_id + "\'" + " UNION select user1_id as user_id from tajik.public_friends F where F.user2_id=" + "\'" + user_id + "\')");
+
+
+            ResultSet rst = stmt.executeQuery("select F.user_id,U.first_name,U.last_name from friendsOfUser F, tajik.public_users U where F.user_id=U.user_id order by U.year_of_birth asc, U.month_of_birth asc, U.day_of_birth asc, F.user_id desc");
+            if (rst.next()) {
+                this.oldestFriend = new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3));
+            }
+
+            rst = stmt.executeQuery("select F.user_id,U.first_name,U.last_name from friendsOfUser F, tajik.public_users U where F.user_id=U.user_id order by U.year_of_birth desc, U.month_of_birth desc, U.day_of_birth desc, F.user_id asc");
+            if (rst.next()) {
+                this.youngestFriend = new UserInfo(rst.getLong(1), rst.getString(2), rst.getString(3));
+            }
+
+
+            stmt.executeQuery("drop view friendsOfUser");
+
+            // Close statement and result set
+            rst.close();
+            stmt.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
     }
 
     @Override
@@ -434,14 +615,44 @@ public class MyFakebookOracle extends FakebookOracle {
     //
     //
     public void findPotentialSiblings() {
-        Long user1_id = 123L;
-        String user1FirstName = "User1FirstName";
-        String user1LastName = "User1LastName";
-        Long user2_id = 456L;
-        String user2FirstName = "User2FirstName";
-        String user2LastName = "User2LastName";
-        SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
-        this.siblings.add(s);
+//        Long user1_id = 123L;
+//        String user1FirstName = "User1FirstName";
+//        String user1LastName = "User1LastName";
+//        Long user2_id = 456L;
+//        String user2FirstName = "User2FirstName";
+//        String user2LastName = "User2LastName";
+//        SiblingInfo s = new SiblingInfo(user1_id, user1FirstName, user1LastName, user2_id, user2FirstName, user2LastName);
+//        this.siblings.add(s);
+
+        SiblingInfo s;
+        
+        try (Statement stmt =
+                     oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                             ResultSet.CONCUR_READ_ONLY)) {
+
+            // For each month, find the number of users born that month
+            // Sort them in descending order of count
+            ResultSet rst = stmt.executeQuery("select U1.user_id,U1.first_name,U1.last_name, U2.user_id,U2.first_name,U2.last_name from tajik.public_users U1 " +
+                    "join tajik.public_users U2 on U1.user_id<U2.user_id and U1.year_of_birth-U2.year_of_birth<10 and U2.year_of_birth-U1.year_of_birth<10 and U1.last_name=U2.last_name " +
+                    "join tajik.public_friends F on (U1.user_id=F.user1_id and U2.user_id=F.user2_id) or (U1.user_id=F.user2_id and U2.user_id=F.user1_id) " +
+                    "join tajik.public_user_hometown_city H1 on U1.user_id=H1.user_id " +
+                    "join tajik.public_user_hometown_city H2 on U2.user_id=H2.user_id and H1.hometown_city_id=H2.hometown_city_id " +
+                    "order by U1.user_id asc, U2.user_id asc ");
+
+            while (rst.next()) {
+                s = new SiblingInfo(rst.getLong(1), rst.getString(2), rst.getString(3), rst.getLong(4), rst.getString(5), rst.getString(6));
+                this.siblings.add(s);
+
+            }
+
+
+            // Close statement and result set
+            rst.close();
+            stmt.close();
+        } catch (SQLException err) {
+            System.err.println(err.getMessage());
+        }
     }
+
 
 }
